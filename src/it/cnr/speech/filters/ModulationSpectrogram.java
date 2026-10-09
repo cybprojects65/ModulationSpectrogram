@@ -216,7 +216,7 @@ public class ModulationSpectrogram {
 			
 			System.out.println("Cut-off spectrum OK");
 
-			//if (modulationSpectrogram == null)
+			if (modulationSpectrogram == null)
 				modulationSpectrogram = new double[numberOfMSFeatures][spectrogram_4hz_slice.length];
 
 			modulationSpectrogram[numberOfMSFeatures-k-1] = spectrogram_4hz_slice;
