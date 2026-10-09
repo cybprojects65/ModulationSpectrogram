@@ -6,8 +6,9 @@ import java.io.FileWriter;
 import java.util.Arrays;
 
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 
-import it.cnr.speech.utils.AudioBits;
 import it.cnr.speech.utils.AudioWaveGenerator;
 import it.cnr.speech.utils.SignalProcessing;
 
@@ -59,7 +60,8 @@ public class ModulationSpectrogram {
 		 */
 		
 		for (int k = 0; k < numberOfMSFeatures; k++) {
-			int melFilterCounter = k;
+			//int melFilterCounter = k;
+			int melFilterCounter = k + 1;
 			// I will use the original Greenwood filterbank from "Critical bandwidth and the
 			// frequency coordinates of the basilar membrane." simulated as Mel triangular
 			// filters
@@ -214,7 +216,7 @@ public class ModulationSpectrogram {
 			
 			System.out.println("Cut-off spectrum OK");
 
-			if (modulationSpectrogram == null)
+			//if (modulationSpectrogram == null)
 				modulationSpectrogram = new double[numberOfMSFeatures][spectrogram_4hz_slice.length];
 
 			modulationSpectrogram[numberOfMSFeatures-k-1] = spectrogram_4hz_slice;
@@ -269,4 +271,5 @@ public class ModulationSpectrogram {
 
 	}
 
+	
 }

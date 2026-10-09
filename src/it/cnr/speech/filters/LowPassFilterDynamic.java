@@ -80,7 +80,8 @@ public class LowPassFilterDynamic {
         
         for (int i =0 ;i<windowSize;i++) {
         	int nextIdx = startIdx+i;
-        	if (nextIdx< (signal.length-1 ) )
+        	if (nextIdx < signal.length)
+        	//if (nextIdx< (signal.length-1 ) )
         		windowedSegment [i] = signal [nextIdx];
         	else
         		windowedSegment [i] = 0;

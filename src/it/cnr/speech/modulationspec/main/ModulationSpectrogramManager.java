@@ -4,6 +4,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+
 import it.cnr.speech.filters.ModulationSpectrogram;
 import it.cnr.speech.utils.UtilsMath;
 
@@ -14,6 +18,9 @@ public class ModulationSpectrogramManager {
 	public List<double[]> extractModulationSpectrogram(File entireSignal, int modulation_spectrogram_nfeatures,
 			double modulation_spectrogram_max_frequency, boolean delta, boolean doubledelta) throws Exception {
 
+		validateAudioFormat(entireSignal);
+
+				
 		List<double[]> features = new ArrayList<double[]>();
 
 		boolean saturate = true;
@@ -206,6 +213,54 @@ public class ModulationSpectrogramManager {
 
 	    boolean header = true;
 	    UtilsMath.saveFeaturesToFile(msFeatures, output, header);
+	}
+	
+	private static void validateAudioFormat(File audio) throws Exception {
+	    try (AudioInputStream stream = AudioSystem.getAudioInputStream(audio)) {
+	        AudioFormat format = stream.getFormat();
+
+	        boolean supported =
+	            AudioFormat.Encoding.PCM_SIGNED.equals(format.getEncoding())
+	            && format.getSampleSizeInBits() == 16
+	            && format.getChannels() == 1
+	            && format.getFrameSize() == 2
+	            && !format.isBigEndian();
+
+	        if (!supported) {
+	            throw new IllegalArgumentException(
+	                "Unsupported audio format: " + format
+	                + ". Required: signed 16-bit little-endian mono PCM."
+	            );
+	        }
+
+	        float sampleRate = format.getSampleRate();
+
+	        if (!Float.isFinite(sampleRate)
+	                || sampleRate < ModulationSpectrogram.modulationSpectrogramWorkingFreq
+	                || sampleRate != Math.rint(sampleRate)) {
+	            throw new IllegalArgumentException(
+	                "Unsupported sampling rate: " + sampleRate
+	                + " Hz. Required: a whole-number sampling rate of at least "
+	                + ModulationSpectrogram.modulationSpectrogramWorkingFreq
+	                + " Hz."
+	            );
+	        }
+
+	        // The current AudioBits reader allocates its buffer from this value.
+	        long frameCount = stream.getFrameLength();
+
+	        if (frameCount <= 0) {
+	            throw new IllegalArgumentException(
+	                "Audio must have a known, positive frame count."
+	            );
+	        }
+
+	        if (frameCount > Integer.MAX_VALUE / format.getFrameSize()) {
+	            throw new IllegalArgumentException(
+	                "Audio is too large for the current in-memory reader."
+	            );
+	        }
+	    }
 	}
 	
 }

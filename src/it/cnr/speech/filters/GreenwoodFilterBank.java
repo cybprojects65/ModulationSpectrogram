@@ -117,12 +117,16 @@ public class GreenwoodFilterBank extends LowPassFilterDynamic{
         	filteredSpectrum[i] = Complex.ZERO;
         		
         for (int i = cbinprev; i <= cbin; i++){
-            double weight = ((i - cbinprev + 1) / (cbin - cbinprev + 1));
+        	double weight =
+        		    (double) (i - cbinprev + 1) / (cbin - cbinprev + 1);
+            //double weight = ((i - cbinprev + 1) / (cbin - cbinprev + 1));
         	filteredSpectrum[i] = complexSpectrum[i].multiply(weight);
         }
         
         for (int i = cbin + 1; i <= cbinpost; i++){
-        	double weight = (1 - ((i - cbin) / (cbinpost - cbin + 1)));
+        	double weight =
+        		    1.0 - (double) (i - cbin) / (cbinpost - cbin + 1);
+        	//double weight = (1 - ((i - cbin) / (cbinpost - cbin + 1)));
         	filteredSpectrum[i] = complexSpectrum[i].multiply(weight);
         }
         

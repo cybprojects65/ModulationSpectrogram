@@ -122,11 +122,29 @@ public class SignalProcessing {
 	public static double[] normaliseByAverageEnvelopeLevel (double signal[]) {
 		
 		double ael = calculateAverageEnvelopeLevel(signal);
+
+		if (!Double.isFinite(ael)) {
+		    throw new IllegalArgumentException("Non-finite envelope level.");
+		}
+
+		double[] result = new double[signal.length];
+
+		if (ael == 0.0) {
+		    return result;
+		}
+
+		for (int i = 0; i < signal.length; i++) {
+		    result[i] = signal[i] / ael;
+		}
+		return result;
+		/*
+		double ael = calculateAverageEnvelopeLevel(signal);
 		double aelSignal [] = new double[signal.length];
 		for (int i=0;i<signal.length;i++) {
 			aelSignal[i] = signal[i]/ael;
 		}
 		return aelSignal;
+		*/
 	}
 	
 	public static double samplesToTime(int samples, double fs) {
