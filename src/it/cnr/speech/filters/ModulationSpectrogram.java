@@ -21,6 +21,7 @@ public class ModulationSpectrogram {
 	public static boolean saveSteps = false;
 	public static double maxdB = 30;
 	public static double mindB = -30;
+	public static int modulationSpectrogramWorkingFreq = 8000;
 	
 	public static int getMSIndex (double time, double modSpecWindowSec) {
 		double t = 0;
@@ -42,7 +43,9 @@ public class ModulationSpectrogram {
 
 		SignalProcessing sc = new SignalProcessing();
 		sc.getSignal(audio);
-
+		sc.downsampleSignal(modulationSpectrogramWorkingFreq);
+		AudioFormat processingFormat =
+			    new AudioFormat(sc.samplingRate, 16, 1, true, false);
 		/*
 		 * LowPassFilterDynamic lptest = new LowPassFilterDynamic(cutoffFreq,
 		 * sc.samplingRate, 0.01); //LowPassFilterStatic lowpass = new
@@ -70,7 +73,7 @@ public class ModulationSpectrogram {
 			if (saveSteps) {
 				stepCheckFile = new File(audio.getAbsolutePath().replace(".wav", "_mel_" + melFilterCounter + ".wav"));
 				AudioWaveGenerator.generateWaveFromSamplesWithSameFormat(mel_signal, stepCheckFile,
-						new AudioBits(audio).getAudioFormat());
+						processingFormat);
 			}
 			System.out.println("Mel filter n. " + melFilterCounter + " done");
 
@@ -79,25 +82,57 @@ public class ModulationSpectrogram {
 			if (saveSteps) {
 				stepCheckFile = new File(stepCheckFile.getAbsolutePath().replace(".wav", "_rect.wav"));
 				AudioWaveGenerator.generateWaveFromSamplesWithSameFormat(hwr_signal, stepCheckFile,
-						new AudioBits(audio).getAudioFormat());
+						processingFormat);
 			}
 			System.out.println("Rectification done");
 
 			System.out.println("Low-pass of " + 28 + "Hz");
-			LowPassFilterDynamic lowpass = new LowPassFilterDynamic(cutoffFreq, sc.samplingRate, 0.01);
 			
-			double[] lowpassed_signal = lowpass.applyFilter(hwr_signal);
+			
+			//LowPassFilterDynamic lowpass = new LowPassFilterDynamic(cutoffFreq, sc.samplingRate, 0.01);
+			
+			//double[] lowpassed_signal = lowpass.applyFilter(hwr_signal);
+			
+			double[] lowpassed_signal = SignalProcessing.lowPassEnvelope(
+				    hwr_signal,
+				    sc.samplingRate,
+				    28.0
+				);
+			
 			System.out.println("Low-pass OK");
 			if (saveSteps) {
 				stepCheckFile = new File(stepCheckFile.getAbsolutePath().replace(".wav", "_lowp.wav"));
 				AudioWaveGenerator.generateWaveFromSamplesWithSameFormat(lowpassed_signal, stepCheckFile,
-						new AudioBits(audio).getAudioFormat());
+						processingFormat);
 			}
 
 			System.out.println("Downsampling");
-			double[] lowpassed_subsampled_signal = DownSampler.downsample(lowpassed_signal, reductionFactor);
-			int samplingRateReduced = sc.samplingRate / reductionFactor;
-			AudioFormat downaf = new AudioFormat(samplingRateReduced, 16, 1, true, true);
+			
+			final int samplingRateReduced = 80;
+
+			if (sc.samplingRate < samplingRateReduced
+			        || sc.samplingRate % samplingRateReduced != 0) {
+			    throw new IllegalArgumentException(
+			        "Audio sampling rate must be an integer multiple of 80 Hz."
+			    );
+			}
+
+			final int envelopeReductionFactor =
+			    sc.samplingRate / samplingRateReduced;
+
+			double[] lowpassed_subsampled_signal = DownSampler.downsample(
+			    lowpassed_signal,
+			    envelopeReductionFactor
+			);
+
+			AudioFormat downaf =
+			    new AudioFormat(samplingRateReduced, 16, 1, true, true);
+			
+			
+			///////////////////////
+			//double[] lowpassed_subsampled_signal = DownSampler.downsample(lowpassed_signal, reductionFactor);
+			//int samplingRateReduced = sc.samplingRate / reductionFactor;
+			//AudioFormat downaf = new AudioFormat(samplingRateReduced, 16, 1, true, true);
 			if (saveSteps) {
 				stepCheckFile = new File(stepCheckFile.getAbsolutePath().replace(".wav", "_downsp.wav"));
 				AudioWaveGenerator.generateWaveFromSamplesWithSameFormat(lowpassed_subsampled_signal, stepCheckFile,
@@ -117,6 +152,7 @@ public class ModulationSpectrogram {
 			System.out.println("Normalising OK");
 
 			System.out.println("FFT");
+			/*
 			SignalProcessing scReduced = new SignalProcessing();
 			double[][] spectrogram = scReduced.shortTermFFT(lowpassed_subsampled_normalised_signal, samplingRateReduced,
 					windowSize, windowShift);
@@ -131,10 +167,32 @@ public class ModulationSpectrogram {
 					minPossibleFreq, maxPossibleFreq,
 					scReduced.windowSizeSamples, samplingRateReduced);
 			double[] spectrogram_4hz_slice = new double[spectrogram_4hz.length];
+			*/
 			
+			double[] magnitudes4Hz = SignalProcessing.modulationMagnitude4Hz(
+				    lowpassed_subsampled_normalised_signal,
+				    samplingRateReduced
+				);
+
+			double[] spectrogram_4hz_slice = new double[magnitudes4Hz.length];
 			
 			//report magnitude in Dbs and saturate dBs between 30 and -30 dBs
 			
+			for (int i = 0; i < spectrogram_4hz_slice.length; i++) {
+			    double power = magnitudes4Hz[i] * magnitudes4Hz[i];
+
+			    if (saturate) {
+			        double db = (power > 0.0)
+			            ? 10.0 * Math.log10(power)
+			            : -30.0;
+
+			        spectrogram_4hz_slice[i] =
+			            Math.max(-30.0, Math.min(30.0, db));
+			    } else {
+			        spectrogram_4hz_slice[i] = power;
+			    }
+			}
+			/*
 			for (int i = 0; i < spectrogram_4hz_slice.length; i++) {
 					spectrogram_4hz_slice[i] = Math.pow(spectrogram_4hz[i][0], 2);
 					
@@ -152,7 +210,7 @@ public class ModulationSpectrogram {
 					} 
 					
 				}
-			
+			*/
 			
 			System.out.println("Cut-off spectrum OK");
 
